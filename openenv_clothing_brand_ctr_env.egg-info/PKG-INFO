@@ -1,0 +1,16 @@
+Metadata-Version: 2.4
+Name: openenv-clothing_brand_ctr_env
+Version: 0.1.0
+Summary: Clothing Brand Ctr Env environment for OpenEnv
+Requires-Python: >=3.10
+Requires-Dist: openenv-core[core]>=0.2.0
+Requires-Dist: numpy>=2.0.0
+Requires-Dist: pandas>=2.2.0
+Requires-Dist: scipy>=1.13.0
+Requires-Dist: scikit-learn>=1.5.0
+Requires-Dist: matplotlib>=3.8.0
+Requires-Dist: seaborn>=0.13.0
+Requires-Dist: python-dotenv>=1.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0.0; extra == "dev"

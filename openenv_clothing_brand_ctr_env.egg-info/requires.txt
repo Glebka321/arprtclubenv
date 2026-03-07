@@ -1,0 +1,12 @@
+openenv-core[core]>=0.2.0
+numpy>=2.0.0
+pandas>=2.2.0
+scipy>=1.13.0
+scikit-learn>=1.5.0
+matplotlib>=3.8.0
+seaborn>=0.13.0
+python-dotenv>=1.0.0
+
+[dev]
+pytest>=8.0.0
+pytest-cov>=4.0.0

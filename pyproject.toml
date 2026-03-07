@@ -1,0 +1,45 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openenv-clothing_brand_ctr_env"
+version = "0.1.0"
+description = "Clothing Brand Ctr Env environment for OpenEnv"
+requires-python = ">=3.10"
+dependencies = [
+    # Core OpenEnv runtime (provides FastAPI server + HTTP client types)
+    # install from github
+    # "openenv-core[core] @ git+https://github.com/meta-pytorch/OpenEnv.git",
+    "openenv-core[core]>=0.2.0",
+    # Environment-specific dependencies for CTR simulation workflows
+    "numpy>=2.0.0",
+    "pandas>=2.2.0",
+    "scipy>=1.13.0",
+    "scikit-learn>=1.5.0",
+    "matplotlib>=3.8.0",
+    "seaborn>=0.13.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+]
+
+[project.scripts]
+# Server entry point - enables running via: uv run --project . server
+# or: python -m clothing_brand_ctr_env.server.app
+server = "clothing_brand_ctr_env.server.app:main"
+
+[tool.setuptools]
+include-package-data = true
+packages = ["clothing_brand_ctr_env", "clothing_brand_ctr_env.server"]
+package-dir = { "clothing_brand_ctr_env" = ".", "clothing_brand_ctr_env.server" = "server" }
