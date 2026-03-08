@@ -34,6 +34,7 @@ except Exception as e:  # pragma: no cover
     raise ImportError(
         "openenv is required for the web interface. Install dependencies with '\n    uv sync\n'"
     ) from e
+from fastapi.responses import RedirectResponse
 
 try:
     from ..models import ClothingBrandCtrAction, ClothingBrandCtrObservation
@@ -50,6 +51,16 @@ app = create_app(
     env_name="clothing_brand_ctr_env",
     max_concurrent_envs=1,  # increase this number to allow more concurrent WebSocket sessions
 )
+
+# Space landing and README base_path compatibility.
+@app.get("/", include_in_schema=False)
+def root_redirect() -> RedirectResponse:
+    return RedirectResponse(url="/docs")
+
+
+@app.get("/web", include_in_schema=False)
+def web_redirect() -> RedirectResponse:
+    return RedirectResponse(url="/docs")
 
 
 def main(host: str = "0.0.0.0", port: int = 8000):
