@@ -26,6 +26,8 @@ dependencies = [
     "matplotlib>=3.8.0",
     "seaborn>=0.13.0",
     "python-dotenv>=1.0.0",
+    "huggingface-hub>=1.0.0",
+    "datasets>=4.6.0",
 ]
 
 [project.optional-dependencies]

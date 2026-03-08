@@ -7,8 +7,10 @@
 """
 Data models for the Clothing Brand Ctr Env Environment.
 
-The clothing_brand_ctr_env environment is a simple test environment that echoes back messages.
+The clothing_brand_ctr_env environment generates and validates marketing copy.
 """
+
+from typing import Dict, Literal
 
 from pydantic import Field
 
@@ -16,13 +18,45 @@ from openenv.core.env_server.types import Action, Observation
 
 
 class ClothingBrandCtrAction(Action):
-    """Action for the Clothing Brand Ctr Env environment - just a message to echo."""
+    """Action that asks the environment to generate launch email copy."""
 
-    message: str = Field(..., description="Message to echo back")
+    brand_name: str = Field(..., description="Brand name to feature in the email")
+    target_audience: str = Field(
+        ...,
+        description="Who this campaign is aimed at",
+    )
+    brand_voice: Literal["minimal", "bold", "playful", "luxury"] = Field(
+        default="bold",
+        description="Tone style for generated copy",
+    )
+    key_value_prop: str = Field(
+        ...,
+        description="Main value proposition to communicate",
+    )
+    call_to_action: str = Field(
+        ...,
+        description="Primary CTA text to include in the email body",
+    )
 
 
 class ClothingBrandCtrObservation(Observation):
-    """Observation from the Clothing Brand Ctr Env environment - the echoed message."""
+    """Observation with generated email copy and validation results."""
 
-    echoed_message: str = Field(default="", description="The echoed message")
-    message_length: int = Field(default=0, description="Length of the echoed message")
+    subject_line: str = Field(default="", description="Generated subject line")
+    preview_text: str = Field(default="", description="Generated preview/snippet text")
+    email_copy: str = Field(default="", description="Generated full email body copy")
+    word_count: int = Field(default=0, description="Word count for generated body")
+    validation: Dict[str, bool] = Field(
+        default_factory=dict,
+        description="Rule-by-rule validation outcomes",
+    )
+    validation_passed: bool = Field(
+        default=False,
+        description="True when all validation checks pass",
+    )
+    ctr_proxy_score: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=1.0,
+        description="Simple proxy score (0-1) for likely CTR quality",
+    )

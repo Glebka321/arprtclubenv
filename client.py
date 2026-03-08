@@ -29,17 +29,33 @@ class ClothingBrandCtrEnv(
         >>> # Connect to a running server
         >>> with ClothingBrandCtrEnv(base_url="http://localhost:8000") as client:
         ...     result = client.reset()
-        ...     print(result.observation.echoed_message)
+        ...     print(result.observation.preview_text)
         ...
-        ...     result = client.step(ClothingBrandCtrAction(message="Hello!"))
-        ...     print(result.observation.echoed_message)
+        ...     result = client.step(
+        ...         ClothingBrandCtrAction(
+        ...             brand_name="AIRPORT CLUB",
+        ...             target_audience="style-focused people that travel",
+        ...             brand_voice="bold, easy-going, fun, wholesome",
+        ...             key_value_prop="premium t-shirts when traveling by plane",
+        ...             call_to_action="Shop the launch collection now",
+        ...         )
+        ...     )
+        ...     print(result.observation.validation_passed)
 
     Example with Docker:
         >>> # Automatically start container and connect
         >>> client = ClothingBrandCtrEnv.from_docker_image("clothing_brand_ctr_env-env:latest")
         >>> try:
         ...     result = client.reset()
-        ...     result = client.step(ClothingBrandCtrAction(message="Test"))
+        ...     result = client.step(
+        ...         ClothingBrandCtrAction(
+        ...             brand_name="ARPRT CLUB",
+        ...             target_audience="traveler",
+        ...             brand_voice="bold",
+        ...             key_value_prop="premium essentials with runway-level polish",
+        ...             call_to_action="Shop the launch collection now",
+        ...         )
+        ...     )
         ... finally:
         ...     client.close()
     """
@@ -55,7 +71,12 @@ class ClothingBrandCtrEnv(
             Dictionary representation suitable for JSON encoding
         """
         return {
-            "message": action.message,
+            "brand_name": action.brand_name,
+            "target_audience": action.target_audience,
+            "brand_voice": action.brand_voice,
+            "key_value_prop": action.key_value_prop,
+            "call_to_action": action.call_to_action,
+            "metadata": action.metadata,
         }
 
     def _parse_result(self, payload: Dict) -> StepResult[ClothingBrandCtrObservation]:
@@ -70,8 +91,13 @@ class ClothingBrandCtrEnv(
         """
         obs_data = payload.get("observation", {})
         observation = ClothingBrandCtrObservation(
-            echoed_message=obs_data.get("echoed_message", ""),
-            message_length=obs_data.get("message_length", 0),
+            subject_line=obs_data.get("subject_line", ""),
+            preview_text=obs_data.get("preview_text", ""),
+            email_copy=obs_data.get("email_copy", ""),
+            word_count=obs_data.get("word_count", 0),
+            validation=obs_data.get("validation", {}),
+            validation_passed=obs_data.get("validation_passed", False),
+            ctr_proxy_score=obs_data.get("ctr_proxy_score", 0.0),
             done=payload.get("done", False),
             reward=payload.get("reward"),
             metadata=obs_data.get("metadata", {}),

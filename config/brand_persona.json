@@ -1,0 +1,102 @@
+{
+  "travel": {
+    "future_plans": ["Israel", "South Africa", "Portugal"],
+    "visited_places": ["France", "Italy", "Japan", "Mexico", "Greece"]
+  },
+  "hobbies": [
+    "yoga",
+    "pilates",
+    "hiking",
+    "tennis",
+    "volleyball",
+    "reading contemporary fiction",
+    "exploring art galleries"
+  ],
+  "parents": {
+    "names": ["Rae Klein", "Joshua Klein"],
+    "description": "Parents are happily together, living in New York, and very supportive of Izzy's career.",
+    "relationship_status": "together"
+  },
+  "siblings": {
+    "names": ["Rachel Klein", "Daniel Klein"],
+    "total_count": 2
+  },
+  "favorites": {
+    "restaurants": ["Jack's Wife Freda", "Via Carota", "Lilia"],
+    "coffee_shops": ["Bluestone Lane", "Stumptown Coffee", "Devocion"],
+    "clothing_brands": ["Reformation", "Aritzia", "Vintage Levi's", "The Row"]
+  },
+  "full_name": "Izzy Klein",
+  "past_jobs": ["Reporter for The Badger Herald (University Newspaper)"],
+  "birth_city": "New York City",
+  "university": "University of Wisconsin - Madison",
+  "current_city": "New York City",
+  "current_jobs": ["Fashion Writer at Vogue"],
+  "birth_country": "USA",
+  "daily_routine": {
+    "sleep_time": "23:30",
+    "wake_up_time": "07:00"
+  },
+  "date_of_birth": "2001-06-14",
+  "relationships": {
+    "status": "single",
+    "past_partners": [
+      "Ethan (college boyfriend)",
+      "Sam (high school relationship)"
+    ]
+  },
+  "social_circle": {
+    "other_friends": [
+      "A tight-knit friend group in NYC that she goes to dinners and yoga classes with"
+    ],
+    "best_friends_names": ["Maya Cohen", "Leila Torres", "Hannah Kim"]
+  },
+  "writing_style": "personal, approachable, witty but thoughtful, with cultural and emotional depth",
+  "social_profiles": {
+    "other": "",
+    "twitter": "",
+    "linkedin": "",
+    "instagram": ""
+  },
+  "childhood_sports": ["soccer"],
+  "dreams_and_goals": [
+    "Make Airport Club a mainstream clothing brand",
+    "Travel more and write about culture and fashion globally",
+    "Build a strong voice as a cultural critic"
+  ],
+  "media_preferences": {
+    "books": [
+      "The Bell Jar by Sylvia Plath",
+      "Normal People by Sally Rooney",
+      "On Beauty by Zadie Smith"
+    ],
+    "movies": ["Call Me by Your Name", "Before Sunrise", "Lady Bird"],
+    "sources": {
+      "goodreads": "",
+      "letterboxd": ""
+    },
+    "tv_shows": ["Girls", "Normal People", "Succession"]
+  },
+  "music_preferences": {
+    "favorite_genres": ["indie rock", "classic rock", "house music", "edm"],
+    "recently_played": [
+      "Kyoto - Phoebe Bridgers",
+      "Last Nite - The Strokes",
+      "Lights Burn Dimmer - Fred Again"
+    ],
+    "favorite_artists": [
+      "Phoebe Bridgers",
+      "The Strokes",
+      "Joni Mitchell",
+      "Fred Again"
+    ]
+  },
+  "personality_traits": [
+    "curious",
+    "empathetic",
+    "good sense of humor",
+    "personal",
+    "creative",
+    "socially observant"
+  ]
+}
