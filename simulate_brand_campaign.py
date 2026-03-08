@@ -5,17 +5,23 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
+import json
 import math
 import os
 import random
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 try:
     from dotenv import load_dotenv
 except ImportError:
     load_dotenv = None
+
+try:
+    from huggingface_hub import InferenceClient
+except ImportError:
+    InferenceClient = None
 
 from clothing_brand_ctr_env import ClothingBrandCtrAction
 from clothing_brand_ctr_env.server.clothing_brand_ctr_env_environment import (
@@ -105,37 +111,130 @@ def default_variants() -> List[EmailVariant]:
     ]
 
 
+def _extract_hf_content(response: object) -> str:
+    """Extract text content from HF chat completion response."""
+    choices = getattr(response, "choices", None)
+    if not choices:
+        return ""
+    first_choice = choices[0]
+    message = getattr(first_choice, "message", None)
+    if message is None and isinstance(first_choice, dict):
+        message = first_choice.get("message")
+
+    content = ""
+    if message is not None:
+        content = getattr(message, "content", "")
+        if not content and isinstance(message, dict):
+            content = message.get("content", "")
+
+    if isinstance(content, list):
+        text_parts = []
+        for item in content:
+            if isinstance(item, dict):
+                text_parts.append(str(item.get("text", "")))
+            else:
+                text_parts.append(str(item))
+        return "".join(text_parts).strip()
+
+    return str(content).strip()
+
+
+def _parse_llm_json(content: str) -> Optional[Dict[str, Any]]:
+    """Parse JSON response, tolerating fenced blocks."""
+    cleaned = content.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.strip("`")
+        cleaned = cleaned.replace("json\n", "", 1).strip()
+
+    start = cleaned.find("{")
+    end = cleaned.rfind("}")
+    if start == -1 or end == -1 or end <= start:
+        return None
+    candidate = cleaned[start : end + 1]
+    try:
+        parsed = json.loads(candidate)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(parsed, dict):
+        return None
+    return parsed
+
+
 class TenXMarketerJudge:
     """Judge persona: growth marketer with successful fashion-brand launches."""
 
     name = "10x_marketer"
 
+    def __init__(self) -> None:
+        self._project_root = Path(__file__).resolve().parent
+        self._judge_persona_json = self._load_judge_persona_json(
+            os.getenv("MARKETER_JUDGE_PERSONA_FILE", "config/marketer_judge_persona.json")
+        )
+        self._hf_model_id = os.getenv("MARKETER_JUDGE_MODEL_ID") or os.getenv(
+            "HF_MODEL_ID",
+            "deepseek-ai/DeepSeek-V3",
+        )
+        self._use_hf_judge = os.getenv("USE_MARKETER_JUDGE_LLM", "true").lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        self._hf_token = os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACEHUB_API_TOKEN")
+        self._hf_client = None
+        if self._use_hf_judge and self._hf_token and InferenceClient is not None:
+            self._hf_client = InferenceClient(api_key=self._hf_token)
+
     def score(self, arm: CampaignArm, brand_name: str) -> Tuple[float, str]:
         """Score copy quality and brand positioning consistency from 0-100."""
+        rule_score, rule_notes = self._score_rules(arm=arm, brand_name=brand_name)
+        llm_eval = self._score_with_llm(arm=arm, brand_name=brand_name)
+        if llm_eval is None:
+            rationale = "; ".join(rule_notes[:4]) if rule_notes else "Rule-based score only"
+            return round(rule_score, 2), rationale
+
+        llm_score = clamp(float(llm_eval["overall_score"]), 0.0, 100.0)
+        final_score = round((0.55 * rule_score) + (0.45 * llm_score), 2)
+
+        rationale_parts: List[str] = []
+        if rule_notes:
+            rationale_parts.append(f"Rules: {', '.join(rule_notes[:3])}")
+        rationale_parts.append(f"LLM overall={llm_score:.1f}")
+        if llm_eval.get("subject_score") is not None:
+            rationale_parts.append(f"subject={float(llm_eval['subject_score']):.1f}")
+        if llm_eval.get("copy_score") is not None:
+            rationale_parts.append(f"copy={float(llm_eval['copy_score']):.1f}")
+        if llm_eval.get("rationale"):
+            rationale_parts.append(str(llm_eval["rationale"]))
+        return final_score, "; ".join(rationale_parts[:5])
+
+    def _score_rules(self, arm: CampaignArm, brand_name: str) -> Tuple[float, List[str]]:
+        """Deterministic rule-based baseline score."""
         score = 40.0
         notes: List[str] = []
+        validation = dict(getattr(arm, "validation", {}))
 
-        if arm.validation.get("subject_has_brand"):
+        if validation.get("subject_has_brand"):
             score += 10
             notes.append("Subject includes brand")
-        if arm.validation.get("subject_length_ok"):
+        if validation.get("subject_length_ok"):
             score += 8
             notes.append("Subject length is healthy")
-        if arm.validation.get("preview_length_ok"):
+        if validation.get("preview_length_ok"):
             score += 8
             notes.append("Preview length supports opens")
-        if arm.validation.get("body_has_cta"):
+        if validation.get("body_has_cta"):
             score += 10
             notes.append("CTA is present")
-        if arm.validation.get("body_word_count_ok"):
+        if validation.get("body_word_count_ok"):
             score += 8
             notes.append("Body length is concise")
 
-        score += arm.ctr_proxy_score * 10
+        score += float(getattr(arm, "ctr_proxy_score", 0.0)) * 10
 
-        lower_copy = arm.email_copy.lower()
-        lower_preview = arm.preview_text.lower()
-        lower_subject = arm.subject_line.lower()
+        lower_copy = str(getattr(arm, "email_copy", "")).lower()
+        lower_preview = str(getattr(arm, "preview_text", "")).lower()
+        lower_subject = str(getattr(arm, "subject_line", "")).lower()
         quirky_terms = {
             "lounge",
             "flight",
@@ -150,7 +249,7 @@ class TenXMarketerJudge:
             score += 8
             notes.append("Quirky travel lexicon present")
 
-        positioning_text = f"{arm.key_value_prop} {arm.preview_text}"
+        positioning_text = f"{getattr(arm, 'key_value_prop', '')} {getattr(arm, 'preview_text', '')}"
         if len(positioning_text.split()) <= 24:
             score += 6
             notes.append("Positioning is short")
@@ -159,7 +258,119 @@ class TenXMarketerJudge:
             score += 5
             notes.append("Brand consistency is strong")
 
-        return max(0.0, min(100.0, round(score, 2))), "; ".join(notes[:4])
+        return max(0.0, min(100.0, round(score, 2))), notes
+
+    def _score_with_llm(self, arm: CampaignArm, brand_name: str) -> Optional[Dict[str, object]]:
+        """Score subject + body with DeepSeek based on judge persona JSON."""
+        if self._hf_client is None:
+            return None
+
+        validation = dict(getattr(arm, "validation", {}))
+        prompt_payload = {
+            "brand_name": brand_name,
+            "variant_name": str(getattr(arm, "variant_name", "")),
+            "brand_voice": str(getattr(arm, "brand_voice", "")),
+            "key_value_prop": str(getattr(arm, "key_value_prop", "")),
+            "call_to_action": str(getattr(arm, "call_to_action", "")),
+            "subject_line": str(getattr(arm, "subject_line", "")),
+            "preview_text": str(getattr(arm, "preview_text", "")),
+            "email_copy": str(getattr(arm, "email_copy", "")),
+            "ctr_proxy_score": float(getattr(arm, "ctr_proxy_score", 0.0)),
+            "validation": validation,
+        }
+
+        system_prompt = (
+            "You are a 10x marketer judge for fashion email campaigns. "
+            "Evaluate quality, brand fit, and conversion potential. "
+            "Return strict JSON only."
+        )
+        user_prompt = (
+            "Judge persona JSON:\n"
+            f"{self._judge_persona_json}\n\n"
+            "Email campaign payload:\n"
+            f"{json.dumps(prompt_payload, ensure_ascii=True)}\n\n"
+            "Score the subject line and email body.\n"
+            "Return strict JSON with keys:\n"
+            "- overall_score: number between 0 and 100\n"
+            "- subject_score: number between 0 and 100\n"
+            "- copy_score: number between 0 and 100\n"
+            "- rationale: concise one-sentence explanation\n"
+            "No markdown."
+        )
+
+        try:
+            response = self._hf_client.chat.completions.create(
+                model=self._hf_model_id,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.2,
+                max_tokens=260,
+            )
+            content = _extract_hf_content(response)
+            if not content:
+                return None
+            parsed = _parse_llm_json(content)
+            if parsed is None:
+                return None
+
+            overall_score = self._coerce_number(
+                parsed.get("overall_score", parsed.get("score")),
+            )
+            subject_score = self._coerce_number(parsed.get("subject_score"))
+            copy_score = self._coerce_number(parsed.get("copy_score", parsed.get("body_score")))
+            rationale = str(parsed.get("rationale", "")).strip()
+
+            if overall_score is None:
+                return None
+            return {
+                "overall_score": clamp(overall_score, 0.0, 100.0),
+                "subject_score": clamp(subject_score, 0.0, 100.0)
+                if subject_score is not None
+                else None,
+                "copy_score": clamp(copy_score, 0.0, 100.0) if copy_score is not None else None,
+                "rationale": rationale,
+            }
+        except Exception:
+            return None
+
+    @staticmethod
+    def _coerce_number(value: object) -> Optional[float]:
+        """Convert mixed numeric values to float."""
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, str):
+            try:
+                return float(value.strip())
+            except ValueError:
+                return None
+        return None
+
+    def _load_judge_persona_json(self, persona_path: str) -> str:
+        """Load judge persona JSON file, fallback to a built-in persona."""
+        path = Path(persona_path)
+        if not path.is_absolute():
+            path = self._project_root / path
+        try:
+            parsed = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(parsed, dict):
+                raise ValueError("Judge persona must be a JSON object.")
+        except (FileNotFoundError, json.JSONDecodeError, OSError, ValueError):
+            parsed = {
+                "name": "Avery Quinn",
+                "role": "10x lifecycle marketer",
+                "experience": "scaled 3 clothing brands from 0 to 8-figure revenue",
+                "evaluation_focus": [
+                    "subject line strength",
+                    "brand consistency",
+                    "quirky memorable positioning",
+                    "clarity of CTA",
+                    "likelihood to drive opens and clicks",
+                ],
+                "tone": "direct, conversion-focused, fashion-aware",
+            }
+        return json.dumps(parsed, separators=(",", ":"))
 
 
 class MLEngineerJudge:
