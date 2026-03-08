@@ -12,10 +12,20 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Tuple
 
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    load_dotenv = None
+
 from clothing_brand_ctr_env import ClothingBrandCtrAction
 from clothing_brand_ctr_env.server.clothing_brand_ctr_env_environment import (
     ClothingBrandCtrEnvironment,
 )
+
+if load_dotenv is not None:
+    _MODULE_DIR = Path(__file__).resolve().parent
+    load_dotenv(_MODULE_DIR / ".env")
+    load_dotenv()
 
 
 @dataclass(frozen=True)
@@ -530,8 +540,28 @@ def load_or_create_persona_dataset(
     allow_synthetic_fallback: bool,
 ) -> List[AudiencePersona]:
     """Load existing persona dataset or create from requested source."""
+    def _matches_requested_source(personas: List[AudiencePersona], requested_source: str) -> bool:
+        if not personas:
+            return False
+        if requested_source == "hf":
+            return all(p.persona_source.startswith("hf") for p in personas)
+        return all(p.persona_source == "synthetic" for p in personas)
+
     if dataset_path.exists() and not refresh:
-        return load_persona_dataset(dataset_path)
+        cached = load_persona_dataset(dataset_path)
+        if _matches_requested_source(cached, source):
+            if len(cached) >= size:
+                return cached[:size]
+            print(
+                "Cached persona dataset has fewer rows than requested "
+                f"({len(cached)} < {size}); regenerating."
+            )
+        else:
+            observed_sources = sorted({p.persona_source for p in cached})
+            print(
+                "Cached persona dataset source does not match request "
+                f"(requested={source}, cached={observed_sources}); regenerating."
+            )
 
     if source == "hf":
         try:
