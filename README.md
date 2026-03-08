@@ -1,5 +1,5 @@
 ---
-title: Clothing Brand Ctr Env Environment Server
+title: Email Campaign Simulation
 emoji: 🔉
 colorFrom: blue
 colorTo: pink
@@ -9,47 +9,38 @@ app_port: 8000
 base_path: /web
 tags:
   - openenv
+  - email-marketing
+  - simulation
 ---
 
-# Clothing Brand Ctr Env Environment
+# Email Campaign Simulation Environment
 
-A simple test environment that echoes back messages. Perfect for testing the env APIs as well as demonstrating environment usage patterns.
+Simulation environment for testing and optimizing a clothing-brand email campaign.
+The workflow combines:
+
+- Email copy generation (DeepSeek + template fallback)
+- 10x marketer judging (rule-based + DeepSeek scoring)
+- Persona-based simulation for opens, CTR, and purchases
+- 5-email day/time schedule optimization
 
 ## Quick Start
 
-The simplest way to use the Clothing Brand Ctr Env environment is through the `ClothingBrandCtrEnv` class:
+Run the 5-email optimizer:
 
-```python
-from clothing_brand_ctr_env import ClothingBrandCtrAction, ClothingBrandCtrEnv
-
-try:
-    # Create environment from Docker image
-    clothing_brand_ctr_envenv = ClothingBrandCtrEnv.from_docker_image("clothing_brand_ctr_env-env:latest")
-
-    # Reset
-    result = clothing_brand_ctr_envenv.reset()
-    print(f"Reset: {result.observation.echoed_message}")
-
-    # Send multiple messages
-    messages = ["Hello, World!", "Testing echo", "Final message"]
-
-    for msg in messages:
-        result = clothing_brand_ctr_envenv.step(ClothingBrandCtrAction(message=msg))
-        print(f"Sent: '{msg}'")
-        print(f"  → Echoed: '{result.observation.echoed_message}'")
-        print(f"  → Length: {result.observation.message_length}")
-        print(f"  → Reward: {result.reward}")
-
-finally:
-    # Always clean up
-    clothing_brand_ctr_envenv.close()
+```bash
+python simulate_5_email_campaign.py \
+  --persona-source hf \
+  --send-days mon,tue,wed,thu,fri,sat,sun \
+  --send-hours 8,10,12,15,18,21
 ```
 
-That's it! The `ClothingBrandCtrEnv.from_docker_image()` method handles:
-- Starting the Docker container
-- Waiting for the server to be ready
-- Connecting to the environment
-- Container cleanup when you call `close()`
+Run variant-level campaign simulation:
+
+```bash
+python simulate_brand_campaign.py --persona-source hf
+```
+
+Outputs are written to `outputs/evals/`.
 
 ## Building the Docker Image
 

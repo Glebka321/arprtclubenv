@@ -34,7 +34,7 @@ except Exception as e:  # pragma: no cover
     raise ImportError(
         "openenv is required for the web interface. Install dependencies with '\n    uv sync\n'"
     ) from e
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse
 
 try:
     from ..models import ClothingBrandCtrAction, ClothingBrandCtrObservation
@@ -52,15 +52,168 @@ app = create_app(
     max_concurrent_envs=1,  # increase this number to allow more concurrent WebSocket sessions
 )
 
-# Space landing and README base_path compatibility.
+LANDING_HTML = """
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Email Campaign Simulation</title>
+    <style>
+      :root {
+        --bg: #f6f4ef;
+        --card: #ffffff;
+        --ink: #222222;
+        --muted: #6e675e;
+        --accent: #d5632f;
+        --accent-soft: #ffe5d8;
+      }
+      body {
+        margin: 0;
+        font-family: "Avenir Next", "Segoe UI", sans-serif;
+        background: radial-gradient(circle at 15% 10%, #fff7f1 0%, var(--bg) 45%, #efe9df 100%);
+        color: var(--ink);
+      }
+      .wrap {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 42px 24px 56px;
+      }
+      .hero {
+        background: var(--card);
+        border: 1px solid #ece5dc;
+        border-radius: 18px;
+        padding: 28px;
+        box-shadow: 0 16px 40px rgba(36, 26, 15, 0.08);
+      }
+      h1 {
+        margin: 0 0 10px 0;
+        font-size: clamp(28px, 4vw, 44px);
+        line-height: 1.1;
+      }
+      .sub {
+        margin: 0;
+        color: var(--muted);
+        font-size: 16px;
+      }
+      .badge-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 18px 0 0 0;
+      }
+      .badge {
+        background: var(--accent-soft);
+        color: #7a3518;
+        border: 1px solid #ffd2bc;
+        border-radius: 999px;
+        padding: 7px 12px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .grid {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid #ece5dc;
+        border-radius: 14px;
+        padding: 14px;
+      }
+      .card h3 {
+        margin: 0 0 8px 0;
+        font-size: 15px;
+      }
+      .card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 18px;
+      }
+      .links a {
+        text-decoration: none;
+        color: #fff;
+        background: var(--accent);
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-weight: 700;
+        font-size: 14px;
+      }
+      .links a.secondary {
+        background: #2f6ea7;
+      }
+      pre {
+        margin: 16px 0 0 0;
+        background: #1a1f24;
+        color: #d8e6f3;
+        border-radius: 12px;
+        padding: 14px;
+        overflow-x: auto;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <section class="hero">
+        <h1>Email Marketing Campaign Simulator</h1>
+        <p class="sub">
+          Simulates multi-step brand email campaigns and optimizes opens, click-through rate, and purchases.
+          Uses Hugging Face personas and DeepSeek for generation + marketer judging.
+        </p>
+        <div class="badge-row">
+          <span class="badge">5-email schedule optimization</span>
+          <span class="badge">Day + time simulation</span>
+          <span class="badge">DeepSeek marketer judge</span>
+          <span class="badge">Persona-based outcomes</span>
+        </div>
+        <div class="grid">
+          <article class="card">
+            <h3>Primary metrics</h3>
+            <p>Open rate, CTR, click-to-open rate, purchases, and composite campaign score.</p>
+          </article>
+          <article class="card">
+            <h3>Audience model</h3>
+            <p>Supports Hugging Face Nemotron personas and synthetic fallback for experimentation.</p>
+          </article>
+          <article class="card">
+            <h3>Judging layer</h3>
+            <p>10x marketer judge combines deterministic checks with LLM scoring for subject/body quality.</p>
+          </article>
+          <article class="card">
+            <h3>Optimization output</h3>
+            <p>Top schedule ranking, per-step performance, and top purchasing personas.</p>
+          </article>
+        </div>
+        <div class="links">
+          <a href="/docs">Open API Docs</a>
+          <a class="secondary" href="/health">Health Check</a>
+          <a class="secondary" href="/schema">Schema</a>
+        </div>
+        <pre>python simulate_5_email_campaign.py --persona-source hf --send-days mon,tue,wed,thu,fri --send-hours 8,10,12,15,18</pre>
+      </section>
+    </main>
+  </body>
+</html>
+"""
+
+
 @app.get("/", include_in_schema=False)
-def root_redirect() -> RedirectResponse:
-    return RedirectResponse(url="/docs")
+def landing_page() -> HTMLResponse:
+    return HTMLResponse(LANDING_HTML)
 
 
 @app.get("/web", include_in_schema=False)
-def web_redirect() -> RedirectResponse:
-    return RedirectResponse(url="/docs")
+def landing_page_web() -> HTMLResponse:
+    return HTMLResponse(LANDING_HTML)
 
 
 def main(host: str = "0.0.0.0", port: int = 8000):
