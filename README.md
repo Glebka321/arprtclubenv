@@ -107,6 +107,25 @@ openenv push --private
 openenv push --repo-id my-org/my-env --base-image custom-base:latest --private
 ```
 
+### Deploy from GitHub (recommended for continuous updates)
+
+This repository now includes a GitHub Actions workflow at:
+`.github/workflows/sync-to-hf-space.yml`
+
+It pushes `main` to your Hugging Face Space after each commit.
+
+Set these in your GitHub repository settings:
+
+- **Secret**: `HF_TOKEN`
+- **Variable**: `HF_USERNAME` (your Hugging Face username)
+- **Variable**: `HF_SPACE_REPO_ID` (format: `user-or-org/space-name`)
+
+Then push to `main` and the workflow will deploy automatically.
+
+Note: for Docker Spaces, a root-level `Dockerfile` is required. This repo includes one.
+If your app needs authenticated Hugging Face Hub access at runtime, also set `HF_TOKEN` in your
+Space settings under **Settings -> Variables and secrets -> Secrets**.
+
 After deployment, your space will be available at:
 `https://huggingface.co/spaces/<repo-id>`
 

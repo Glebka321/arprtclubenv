@@ -1,0 +1,43 @@
+name: Sync to Hugging Face Space
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Push to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_USERNAME: ${{ vars.HF_USERNAME }}
+          HF_SPACE_REPO_ID: ${{ vars.HF_SPACE_REPO_ID }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${HF_TOKEN:-}" ]; then
+            echo "Missing GitHub secret HF_TOKEN."
+            exit 1
+          fi
+          if [ -z "${HF_USERNAME:-}" ]; then
+            echo "Missing GitHub variable HF_USERNAME."
+            exit 1
+          fi
+          if [ -z "${HF_SPACE_REPO_ID:-}" ]; then
+            echo "Missing GitHub variable HF_SPACE_REPO_ID (format: user-or-org/space-name)."
+            exit 1
+          fi
+
+          git config --global user.email "actions@github.com"
+          git config --global user.name "github-actions[bot]"
+
+          git remote add hf-space "https://${HF_USERNAME}:${HF_TOKEN}@huggingface.co/spaces/${HF_SPACE_REPO_ID}"
+          git push --force hf-space HEAD:main
